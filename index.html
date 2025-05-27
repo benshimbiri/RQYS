@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RQYS Modernization Strategy Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Executive Summary/Recommendation: Goal: Inform. Method: Prominent text. Justification: Immediate clarity.
+        - Core Requirements (Sec II & Table 1): Goal: Inform, Organize. Method: Clickable cards for main reqs, HTML table for prioritization. Interaction: Click to expand. Justification: Easy exploration.
+        - Solution Pathways (Sec III & Tables 2, 3): Goal: Compare, Inform. Method: Bar chart for suitability scores (Chart.js), expandable sections for pathway details, HTML table for OTS platforms. Interaction: Chart tooltips, expand/collapse. Justification: Clear comparison. Library: Chart.js.
+        - Financials & ROI (Sec VI & Table 4): Goal: Compare, Inform. Method: Bar chart for TCO (Chart.js), interactive list for ROI drivers. Interaction: Chart tooltips, click to expand ROI details. Justification: Visual cost-benefit analysis. Library: Chart.js.
+        - Implementation Roadmap (Sec VII & Table 5): Goal: Inform, Organize. Method: HTML/CSS visual timeline. Interaction: Hover for phase details. Justification: Clear view of project progression.
+        - Key Considerations (AI, Tech, Security): Goal: Inform. Method: Text summaries, bullet points. Justification: Provide necessary context.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        .section-title { font-size: 1.75rem; font-weight: 600; margin-bottom: 1rem; color: #0c4a6e; /* sky-800 */ border-bottom: 2px solid #38bdf8; /* sky-400 */ padding-bottom: 0.5rem; }
+        .subsection-title { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #155e75; /* cyan-700 */ }
+        .content-card { background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); padding: 1.5rem; margin-bottom: 1.5rem; }
+        .nav-button { padding: 0.5rem 1rem; border-radius: 0.375rem; transition: background-color 0.3s, color 0.3s; font-weight: 500; }
+        .nav-button.active { background-color: #0ea5e9; /* sky-500 */ color: white; }
+        .nav-button:not(.active):hover { background-color: #e0f2fe; /* sky-100 */ color: #0c4a6e; /* sky-800 */ }
+        .details-content { display: none; margin-top: 0.75rem; padding-left: 1rem; border-left: 2px solid #0ea5e9; /* sky-500 */ }
+        .details-content.open { display: block; }
+        .expand-button { cursor: pointer; color: #0ea5e9; /* sky-500 */ font-weight: 500; }
+        .expand-button:hover { text-decoration: underline; }
+        .table-container { max-height: 400px; overflow-y: auto; }
+        .sticky-nav { position: sticky; top: 0; z-index: 50; background-color: rgba(248, 250, 252, 0.9); /* slate-50 with opacity */ backdrop-filter: blur(8px); }
+        .phase-timeline { display: flex; overflow-x: auto; padding-bottom: 1rem; }
+        .phase-card { flex: 0 0 280px; /* Fixed width for phase cards */ margin-right: 1rem; border: 1px solid #cbd5e1; /* slate-300 */ border-radius: 0.5rem; padding: 1rem; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .phase-card h4 { font-weight: 600; color: #0369a1; /* sky-700 */ margin-bottom: 0.5rem; }
+        .phase-card p { font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .phase-card strong { color: #475569; /* slate-600 */ }
+        .tooltip { position: relative; display: inline-block; }
+        .tooltip .tooltiptext { visibility: hidden; width: 220px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -110px; opacity: 0; transition: opacity 0.3s; font-size: 0.8rem; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="sticky-nav shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center">
+                <h1 class="text-2xl sm:text-3xl font-bold text-sky-700 mb-2 sm:mb-0">RQYS Modernization Strategy</h1>
+                <nav id="mainNav" class="flex flex-wrap justify-center space-x-1 sm:space-x-2">
+                    <button data-target="overview" class="nav-button active">Overview</button>
+                    <button data-target="requirements" class="nav-button">Requirements</button>
+                    <button data-target="solutions" class="nav-button">Solutions</button>
+                    <button data-target="financials" class="nav-button">Financials</button>
+                    <button data-target="roadmap" class="nav-button">Roadmap</button>
+                    <button data-target="keyConsiderations" class="nav-button">Considerations</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <section id="overview" class="content-section">
+            <h2 class="section-title">Overview & Top Recommendation</h2>
+            <div class="content-card">
+                <p class="mb-4">This interactive application provides an overview of the whitepaper "Modernizing Member Services at the Royal Queensland Yacht Squadron – System Options and Implementation Strategy." Its purpose is to assist the Finance Committee in understanding the options for a new, integrated club management system. The key challenge is to modernize the member experience, enhance operational efficiency, and future-proof RQYS's technology.</p>
+                <div class="bg-sky-100 border-l-4 border-sky-500 text-sky-700 p-4 rounded-md" role="alert">
+                    <p class="font-bold">Top-Level Recommendation:</p>
+                    <p>A <strong class="text-sky-800">Hybrid Approach</strong> is recommended. This involves leveraging a robust, Australian-supported Off-the-Shelf (OTS) core platform for standard functionalities, combined with professionally developed custom integrations or specialized modules for unique requirements like advanced marina management and deeply integrated NFC capabilities. Thorough due diligence in vendor/partner selection is critical.</p>
+                </div>
+                <p class="mt-4">The following sections will allow you to explore the core requirements, compare solution pathways, analyze financial implications, and review the proposed implementation roadmap in detail.</p>
+            </div>
+        </section>
+
+        <section id="requirements" class="content-section hidden">
+            <h2 class="section-title">Core System Requirements</h2>
+            <div class="content-card">
+                <p class="mb-4">The new system must address several core functionalities to meet modern member expectations and improve club operations. Click on each category to see more details. The Feature Prioritization Matrix (Table 1 from the report) is also provided for reference.</p>
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="subsection-title">Key Functional Categories:</h3>
+                        <div class="space-y-3">
+                            <div class="border border-slate-300 p-3 rounded-md bg-white">
+                                <div class="font-semibold text-sky-700 flex justify-between items-center">
+                                    <span>📱 NFC-Powered Mobile Access & Payments</span>
+                                    <button class="expand-button" data-details="nfc-details">Show Details ▼</button>
+                                </div>
+                                <div id="nfc-details" class="details-content">
+                                    <p><strong>Gate Access:</strong> Seamless, secure mobile phone access (Apple/Google Wallet) for club premises, replacing physical cards.</p>
+                                    <p><strong>On-Account Payments:</strong> Mobile/NFC payments for services (bar, restaurant, shop, fuel) charged to member accounts.</p>
+                                    <p><strong>Supporting Tech:</strong> VTAP NFC readers, Sentry Interactive readerless NFC, integration with POS and member accounting.</p>
+                                </div>
+                            </div>
+                            <div class="border border-slate-300 p-3 rounded-md bg-white">
+                                <div class="font-semibold text-sky-700 flex justify-between items-center">
+                                    <span>🏆 Integrated Loyalty & Rewards Program</span>
+                                    <button class="expand-button" data-details="loyalty-details">Show Details ▼</button>
+                                </div>
+                                <div id="loyalty-details" class="details-content">
+                                    <p>Incentivize engagement, recognize patronage, reward behaviors. Accumulate points for spending/activities, tiered benefits, easy redemption.</p>
+                                    <p><strong>Supporting Tech:</strong> API-first loyalty engines (e.g., Open Loyalty), Loyalty NFC systems, digital membership cards.</p>
+                                </div>
+                            </div>
+                            <div class="border border-slate-300 p-3 rounded-md bg-white">
+                                <div class="font-semibold text-sky-700 flex justify-between items-center">
+                                    <span>📅 Comprehensive Booking System</span>
+                                    <button class="expand-button" data-details="booking-details">Show Details ▼</button>
+                                </div>
+                                <div id="booking-details" class="details-content">
+                                    <p>Book club facilities, marina assets (berths, moorings), restaurant reservations, catering.</p>
+                                    <p><strong>Features:</strong> Real-time availability, online booking, configurable rules/rates, automated confirmations.</p>
+                                    <p><strong>Supporting Tech:</strong> Specialized marina management (e.g., Clubessential), restaurant/catering systems (e.g., Tripleseat, TableCheck), general asset booking tools.</p>
+                                </div>
+                            </div>
+                            <div class="border border-slate-300 p-3 rounded-md bg-white">
+                                <div class="font-semibold text-sky-700 flex justify-between items-center">
+                                    <span>📰 Centralized Member Portal & Info Hub</span>
+                                    <button class="expand-button" data-details="portal-details">Show Details ▼</button>
+                                </div>
+                                <div id="portal-details" class="details-content">
+                                    <p>Primary digital interface for members: news, event calendars, rules, account statements, profile updates, club communications.</p>
+                                    <p><strong>Supporting Tech:</strong> Member portals in club management software, mobile apps, CMS, communication tools.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="subsection-title">Feature Prioritization Matrix (Summary)</h3>
+                        <p class="text-sm mb-2">This matrix (Table 1 in the report) helps prioritize functionalities. 'M' is Must-Have, 'S' is Should-Have. Key 'Must-Haves' include NFC gate access, on-account NFC payments, loyalty points accumulation & redemption, marina berth reservations, restaurant bookings, and core portal features.</p>
+                        <div class="table-container border border-slate-300 rounded-md">
+                            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-medium text-slate-600">Feature Category</th>
+                                        <th class="px-3 py-2 text-left font-medium text-slate-600">Functionality</th>
+                                        <th class="px-3 py-2 text-center font-medium text-slate-600">Priority</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <tr><td class="px-3 py-2 font-semibold" colspan="3">NFC Access</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">Mobile gate access</td><td class="px-3 py-2">Main, marina</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 font-semibold" colspan="3">Mobile/NFC Payments</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">On-account POS payments</td><td class="px-3 py-2">Bar, restaurant, shop</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 font-semibold" colspan="3">Loyalty Program</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">Points accumulation</td><td class="px-3 py-2">Spending/activities</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">Reward redemption</td><td class="px-3 py-2">Easy mechanism</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 font-semibold" colspan="3">Marina Booking</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">Berth/mooring reservations</td><td class="px-3 py-2">Real-time</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 font-semibold" colspan="3">Restaurant Booking</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">Online table reservations</td><td class="px-3 py-2">Real-time</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 font-semibold" colspan="3">Member Portal/Info Hub</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">Access news, events, rules</td><td class="px-3 py-2">CMS, mobile app</td><td class="px-3 py-2 text-center">M</td></tr>
+                                    <tr><td class="px-3 py-2 pl-6">View/pay account statements</td><td class="px-3 py-2">Finance integration</td><td class="px-3 py-2 text-center">M</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                         <p class="text-xs mt-2 text-slate-500">Note: This is a summarized version. Refer to the full whitepaper for complete details.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="solutions" class="content-section hidden">
+            <h2 class="section-title">Solution Pathways Analysis</h2>
+            <div class="content-card">
+                 <p class="mb-4">The whitepaper evaluates three primary solution pathways: Off-the-Shelf (OTS) systems, Custom In-House Development, and a Hybrid approach. This section provides a comparative overview, including suitability scores and key considerations for RQYS.</p>
+                <div class="mb-6">
+                    <h3 class="subsection-title">Overall Suitability Score Comparison</h3>
+                    <p class="text-sm mb-2 text-slate-600">Based on Table 3 of the report, comparing overall suitability for RQYS (scale 1-5, 5=High).</p>
+                    <div class="chart-container bg-white p-4 rounded-lg shadow">
+                        <canvas id="suitabilityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <div class="font-semibold text-sky-700 text-lg flex justify-between items-center p-3 bg-sky-50 rounded-t-md border border-b-0 border-sky-300">
+                            <span>1. Off-the-Shelf (OTS) Solutions</span>
+                            <button class="expand-button" data-details="ots-details">Show Details ▼</button>
+                        </div>
+                        <div id="ots-details" class="details-content p-3 border border-t-0 border-sky-300 rounded-b-md">
+                            <p><strong>Overview:</strong> Commercially available software (often SaaS). Can be general or yacht/marina specific.</p>
+                            <p><strong>Pros:</strong> Faster deployment, lower upfront cost (general OTS), vendor-managed maintenance.</p>
+                            <p><strong>Cons:</strong> Limited customization, potential feature gaps (especially for specialized RQYS needs like marina), process adaptation, vendor lock-in.</p>
+                            <p><strong>Cost Bracket (General):</strong> Low to Medium. <strong>(Yacht Specific):</strong> Medium to High.</p>
+                            <p><strong>Timeline Bracket:</strong> Short to Medium.</p>
+                            <p><strong>Leading Platforms (from Table 2):</strong> Clubessential (marina specific), Membes AMS (Aus hosted, Open API), Member Jungle (Aus hosted), Club Apps Global (yacht specific).</p>
+                            <div class="mt-2 p-2 bg-slate-50 rounded">
+                                <h4 class="font-medium text-slate-700">Australian Market Considerations:</h4>
+                                <p class="text-sm">Prioritize vendors with Australian presence, local support, and Australian data hosting (e.g., Membes AMS, Member Jungle). Verify API capabilities for integration if choosing a general OTS.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="font-semibold text-sky-700 text-lg flex justify-between items-center p-3 bg-sky-50 rounded-t-md border border-b-0 border-sky-300">
+                            <span>2. Custom In-House Development</span>
+                             <button class="expand-button" data-details="custom-details">Show Details ▼</button>
+                        </div>
+                        <div id="custom-details" class="details-content p-3 border border-t-0 border-sky-300 rounded-b-md">
+                            <p><strong>Overview:</strong> Building a bespoke system. Can be committee-led (high risk) or professionally outsourced.</p>
+                            <p><strong>Pros (Professionally Outsourced):</strong> Fully tailored solution, complete control.</p>
+                            <p><strong>Cons (Professionally Outsourced):</strong> Very high upfront cost, longest timeline, full burden of maintenance, high project risk.</p>
+                            <p><strong>Cons (Committee-Led):</strong> Extremely high risk of failure, skill gaps, no long-term support, security/compliance vulnerabilities. Strongly discouraged.</p>
+                            <p><strong>Cost Bracket (Professional):</strong> Very High. <strong>(Committee-Led Apparent):</strong> Very Low, Hidden/Risk: Very High.</p>
+                            <p><strong>Timeline Bracket:</strong> Long to Very Long.</p>
+                             <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                <h4 class="font-medium text-red-700">Feasibility for RQYS:</h4>
+                                <p class="text-sm">Requires extensive professional expertise (mobile dev, backend, NFC, payments, security). Committee-led development is fraught with risks (skill gaps, inconsistency, long-term support, security). Full custom build by professionals is costly and resource-intensive for an organization not focused on software development.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-sky-500 rounded-md shadow-lg">
+                        <div class="font-semibold text-white text-lg flex justify-between items-center p-3 bg-sky-600 rounded-t-md">
+                            <span>⭐ 3. Hybrid Approach (Recommended)</span>
+                            <button class="expand-button !text-sky-100 hover:!text-white" data-details="hybrid-details">Show Details ▼</button>
+                        </div>
+                        <div id="hybrid-details" class="details-content p-3 !border-sky-600 open">
+                            <p><strong>Overview:</strong> Combines an OTS core platform with custom-developed modules or integrations for specific RQYS needs.</p>
+                            <p><strong>Pros:</strong> Balances OTS cost-effectiveness with custom flexibility, reduces full custom build risk, leverages vendor updates for core.</p>
+                            <p><strong>Cons:</strong> Integration complexity and cost, dependency on OTS API, potential for "finger-pointing" if issues arise.</p>
+                            <p><strong>Cost Bracket:</strong> Medium to High.</p>
+                            <p><strong>Timeline Bracket:</strong> Medium to Long.</p>
+                            <div class="mt-2 p-2 bg-sky-50 rounded">
+                                <h4 class="font-medium text-sky-700">Implementation Strategy:</h4>
+                                <p class="text-sm">Select a robust OTS core (e.g., Australian-hosted with strong API). Outsource custom enhancements (e.g., advanced marina booking, specific NFC integrations, sophisticated loyalty) to a professional development firm. Success hinges on the OTS platform's API quality and a clear integration strategy.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="financials" class="content-section hidden">
+            <h2 class="section-title">Financial Implications & ROI</h2>
+            <div class="content-card">
+                <p class="mb-4">Understanding the financial aspects is crucial. This section outlines comparative cost structures and potential Return on Investment (ROI) drivers. All costs are indicative and require detailed vendor quotes.</p>
+                <div class="mb-6">
+                    <h3 class="subsection-title">Estimated 3-Year Total Cost of Ownership (TCO) Comparison</h3>
+                     <p class="text-sm mb-2 text-slate-600">High-level estimated TCO ranges from Table 4 of the report.</p>
+                    <div class="chart-container bg-white p-4 rounded-lg shadow">
+                        <canvas id="tcoChart"></canvas>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="subsection-title">Potential ROI Drivers:</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-700">
+                        <li><strong>Increased Member Retention & Acquisition:</strong> Modern experience and loyalty programs improve satisfaction.</li>
+                        <li><strong>Improved Operational Efficiency:</strong> Automation frees up staff time and reduces administrative overhead (e.g., 1.5-2 FTE reported savings by one Membes AMS user).</li>
+                        <li><strong>Reduced Errors & Waste:</strong> Streamlined digital processes minimize manual errors and optimize resource use.</li>
+                        <li><strong>Enhanced Revenue Generation:</strong> Easier online registrations, sales, optimized asset utilization, potentially new service offerings.</li>
+                        <li><strong>Data-Driven Decision Making:</strong> Insights from centralized data inform strategic planning and service improvements.</li>
+                    </ul>
+                </div>
+                <div class="mt-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md">
+                    <h4 class="font-semibold text-amber-700">Budgetary Planning for Finance Committee:</h4>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-amber-700">
+                        <li>Consider Total Cost of Ownership (TCO) over 3-5 years, not just upfront costs.</li>
+                        <li>Factor in all project phases: data migration, training, change management, contingency fund (10-20%).</li>
+                        <li>Compare TCO against tangible (cost savings, revenue) and intangible (member satisfaction, reputation) benefits.</li>
+                        <li>Recognize hidden costs of poorly chosen systems (lost members, future rebuilds).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="roadmap" class="content-section hidden">
+            <h2 class="section-title">Implementation Roadmap & Next Steps</h2>
+            <div class="content-card">
+                <p class="mb-4">A phased implementation is recommended for the Hybrid approach. This section visualizes the illustrative roadmap (based on Table 5) and outlines key project initiation steps and critical success factors.</p>
+
+                <h3 class="subsection-title">Illustrative Phased Implementation Roadmap (Hybrid Approach)</h3>
+                <div class="phase-timeline mb-6">
+                    <div class="phase-card">
+                        <h4>Phase 0: Initiation & Planning</h4>
+                        <p><strong>Duration:</strong> 0-3 Months</p>
+                        <p><strong>Activities:</strong> Steering Committee, RFP, Vendor/Partner Selection, Contracts, Budget, Project Manager, Detailed Plans.</p>
+                        <p><strong>Key Dependencies:</strong> Committee approval, clear requirements.</p>
+                    </div>
+                    <div class="phase-card">
+                        <h4>Phase 1: Core OTS & Foundational Integrations</h4>
+                        <p><strong>Duration:</strong> 3-9 Months</p>
+                        <p><strong>Activities:</strong> OTS Setup (Membership, Portal, Comms, Events, Finance Link), Initial Data Migration, NFC Gate Access Pilot, Staff Training.</p>
+                        <p><strong>Key Dependencies:</strong> Contracts signed, cleansed data, NFC hardware.</p>
+                    </div>
+                    <div class="phase-card">
+                        <h4>Phase 2: Payment Systems & Core Booking</h4>
+                        <p><strong>Duration:</strong> 6-12 Months (from Phase 1 start)</p>
+                        <p><strong>Activities:</strong> NFC On-Account Payment & POS Integration, Restaurant Booking, General Resource Booking, Further Data Migration.</p>
+                        <p><strong>Key Dependencies:</strong> Stable core, POS vendor cooperation.</p>
+                    </div>
+                    <div class="phase-card">
+                        <h4>Phase 3: Specialized Marina Booking & Adv. Integrations</h4>
+                        <p><strong>Duration:</strong> 9-18 Months (from Phase 1 start)</p>
+                        <p><strong>Activities:</strong> Marina Asset Booking System, Catering Booking, Other Complex Asset Bookings, Full Integration Testing.</p>
+                        <p><strong>Key Dependencies:</strong> Detailed marina reqs, API availability.</p>
+                    </div>
+                     <div class="phase-card">
+                        <h4>Phase 4: Loyalty Program & Full Go-Live</h4>
+                        <p><strong>Duration:</strong> 15-24 Months (from Phase 1 start)</p>
+                        <p><strong>Activities:</strong> Loyalty Program Dev/Integration, System-wide UAT, Member Onboarding, Launch Campaign, Decommission Old Systems.</p>
+                        <p><strong>Key Dependencies:</strong> All previous phases stable, marketing plan.</p>
+                    </div>
+                    <div class="phase-card">
+                        <h4>Ongoing: Support & Enhancements</h4>
+                        <p><strong>Duration:</strong> Continuous</p>
+                        <p><strong>Activities:</strong> Monitoring, User Support, Bug Fixes, Security Updates, New Features based on feedback & strategy.</p>
+                        <p><strong>Key Dependencies:</strong> Maintenance budget, feedback mechanisms.</p>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="subsection-title">Key Steps for Project Initiation & Governance:</h3>
+                        <ul class="list-disc list-inside space-y-1 text-slate-700">
+                            <li>Establish a Project Steering Committee (cross-functional).</li>
+                            <li>Develop detailed RFP based on whitepaper.</li>
+                            <li>Conduct thorough due diligence on vendors/partners (demos, references, API strength).</li>
+                            <li>Secure formal budget approval.</li>
+                            <li>Appoint a dedicated Project Manager (internal or external).</li>
+                            <li>Develop a comprehensive Project Plan (scope, timelines, resources, communication, risk, change management).</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="subsection-title">Critical Success Factors:</h3>
+                        <ul class="list-disc list-inside space-y-1 text-slate-700">
+                            <li>Strong leadership and commitment from RQYS Board & Management.</li>
+                            <li>Clear vision and well-defined requirements.</li>
+                            <li>Effective project governance and management.</li>
+                            <li>Thorough data migration and system testing.</li>
+                            <li>Comprehensive user training and change management.</li>
+                            <li>Ongoing monitoring, evaluation, and iteration.</li>
+                            <li>Prioritization of security and compliance throughout.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="keyConsiderations" class="content-section hidden">
+            <h2 class="section-title">Key Considerations: AI, Technology, Security</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="content-card">
+                    <h3 class="subsection-title">Role of Artificial Intelligence (AI)</h3>
+                    <p class="text-sm mb-2">AI can assist in development but is not a replacement for expertise.</p>
+                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600">
+                        <li><strong>Streamlining Integration:</strong> AI tools can help create/test/document APIs, but complex integration still needs human expertise.</li>
+                        <li><strong>AI-Assisted Coding:</strong> Tools like GitHub Copilot can increase productivity for developers (boilerplate code, suggestions).</li>
+                        <li><strong>Pitfalls:</strong> AI lacks deep business context, code quality/security needs human review, risk of overreliance, IP/licensing concerns.</li>
+                        <li><strong>Impact for RQYS:</strong> AI is a productivity enhancer for a professional development team, not a way for non-experts to build a complex system.</li>
+                    </ul>
+                </div>
+                <div class="content-card">
+                    <h3 class="subsection-title">Key Technology Stack Considerations</h3>
+                     <p class="text-sm mb-2">Important for custom/hybrid parts. Choices impact cost, maintainability, skills.</p>
+                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600">
+                        <li><strong>Mobile App:</strong> Native (Swift/iOS, Kotlin/Android) for best performance vs. Cross-platform (Flutter, React Native) for potential cost/time savings.</li>
+                        <li><strong>Backend:</strong> Node.js, Python, Ruby, Java, .NET. SQL (MySQL, PostgreSQL) or NoSQL (MongoDB) databases.</li>
+                        <li><strong>NFC Implementation:</strong> Requires NFC reader hardware/software, credential management (Apple/Google Wallet), secure APIs.</li>
+                        <li><strong>API Design:</strong> Critical for hybrid. RESTful or GraphQL, well-documented, secure, versioned, scalable.</li>
+                        <li><strong>Hosting:</strong> Cloud (AWS, Azure, GCP). Prioritize Australian data centers for data sovereignty.</li>
+                        <li><strong>Priorities:</strong> Long-term security, scalability, maintainability, reliability. Quality of OTS API is key for hybrid.</li>
+                    </ul>
+                </div>
+                <div class="content-card">
+                    <h3 class="subsection-title">Critical Security & Compliance Mandates</h3>
+                    <p class="text-sm mb-2">Must be integral from the start. Non-compliance leads to severe penalties and reputational damage.</p>
+                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600">
+                        <li><strong>PCI DSS:</strong> Mandatory for card payments. Secure network, protect cardholder data, vulnerability management, access control. Verify vendor compliance.</li>
+                        <li><strong>Australian Privacy Principles (APPs):</strong> Governs handling of personal info. Transparent management, lawful collection, use/disclosure limits, data quality, security safeguards, access/correction rights.</li>
+                        <li><strong>Data Sovereignty:</strong> Strongly recommend Australian data hosting to minimize APP 8 risks. Verify vendor claims.</li>
+                        <li><strong>Notifiable Data Breaches (NDB) Scheme:</strong> Must notify OAIC and individuals of eligible data breaches. Requires robust security and response plans.</li>
+                        <li><strong>Implication:</strong> Favors solutions/partners with proven security expertise. High risk for non-expert in-house builds.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-6 bg-slate-800 text-slate-300 text-sm">
+        <p>&copy; RQYS Modernization Strategy Explorer. For illustrative purposes based on the provided whitepaper.</p>
+    </footer>
+
+    <script>
+        const navButtons = document.querySelectorAll('#mainNav button');
+        const contentSections = document.querySelectorAll('.content-section');
+        const expandButtons = document.querySelectorAll('.expand-button');
+
+        function showSection(targetId) {
+            contentSections.forEach(section => {
+                if (section.id === targetId) {
+                    section.classList.remove('hidden');
+                    document.getElementById(targetId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    section.classList.add('hidden');
+                }
+            });
+            navButtons.forEach(button => {
+                if (button.dataset.target === targetId) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                showSection(button.dataset.target);
+            });
+        });
+
+        expandButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const detailsId = button.dataset.details;
+                const detailsContent = document.getElementById(detailsId);
+                detailsContent.classList.toggle('open');
+                button.textContent = detailsContent.classList.contains('open') ? 'Hide Details ▲' : 'Show Details ▼';
+            });
+        });
+
+        // Initial section display
+        showSection('overview');
+
+        // Chart.js implementations
+        // Suitability Chart (Table 3)
+        const suitabilityCtx = document.getElementById('suitabilityChart')?.getContext('2d');
+        if (suitabilityCtx) {
+            new Chart(suitabilityCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['OTS - General', 'OTS - Yacht Specific', 'Custom - Committee', 'Custom - Professional', 'Hybrid (Recommended)'],
+                    datasets: [{
+                        label: 'Overall Suitability Score (1-5)',
+                        data: [2, 3.5, 0.5, 2.5, 4],
+                        backgroundColor: [
+                            'rgba(100, 162, 235, 0.6)', // Muted Blue
+                            'rgba(54, 162, 235, 0.7)',  // Blue
+                            'rgba(255, 99, 132, 0.6)',  // Red (low score)
+                            'rgba(255, 159, 64, 0.6)',  // Orange
+                            'rgba(75, 192, 192, 0.8)'   // Teal (Recommended)
+                        ],
+                        borderColor: [
+                            'rgba(100, 162, 235, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(75, 192, 192, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5,
+                            title: { display: true, text: 'Suitability Score' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Solution Pathway Suitability for RQYS' }
+                    }
+                }
+            });
+        }
+
+        // TCO Chart (Table 4)
+        const tcoCtx = document.getElementById('tcoChart')?.getContext('2d');
+        if (tcoCtx) {
+            new Chart(tcoCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['OTS - Low Tier', 'OTS - Mid Tier', 'OTS - Yacht Specific', 'Hybrid', 'Custom - Professional'],
+                    datasets: [{
+                        label: 'Min Estimated 3-Year TCO (AUD)',
+                        data: [11000, 50000, 110000, 145000, 240000],
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)', // Orange
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1,
+                        stack: 'Stack 0',
+                    }, {
+                        label: 'Max Estimated 3-Year TCO (AUD) - Additional',
+                        data: [ (50000-11000), (160000-50000), (300000-110000), (460000-145000), (800000-240000)], // Value to reach max
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)', // Red
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1,
+                        stack: 'Stack 0',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Estimated TCO (AUD)' },
+                            ticks: {
+                                callback: function(value) { return 'AUD ' + (value/1000) + 'k'; }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: 'Estimated 3-Year TCO Ranges' },
+                        tooltip: {
+                             callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex === 0) { // Min TCO
+                                             label += new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits:0 }).format(context.parsed.y);
+                                        } else { // Additional to reach Max TCO
+                                            const minVal = context.chart.data.datasets[0].data[context.dataIndex];
+                                            const totalMax = minVal + context.parsed.y;
+                                             label = `Max TCO: ${new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits:0 }).format(totalMax)}`;
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
